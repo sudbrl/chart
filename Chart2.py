@@ -5,42 +5,28 @@ from fpdf import FPDF
 import streamlit as st
 import tempfile
 import os
+import time
 from supabase import create_client, Client
 
 # --- Supabase Initialization (Secure) ---
 @st.cache_resource
 def init_supabase():
-    """
-    Initialize Supabase client using Streamlit Secrets.
-    The keys are NOT stored in the code. They are fetched securely from the environment.
-    """
-    # 1. Check if the 'supabase' section exists in secrets
+    """Initialize Supabase client using Streamlit Secrets."""
     if "supabase" not in st.secrets:
         st.error("⚠️ Secrets configuration is missing.")
-        st.info("""
-        **To fix this:**
-        1. Create a file `.streamlit/secrets.toml` (locally) OR go to 'Settings -> Secrets' (Streamlit Cloud).
-        2. Add the following:
-           ```toml
-           [supabase]
-           url = "YOUR_SUPABASE_URL"
-           key = "YOUR_SUPABASE_ANON_KEY"
-           ```
-        """)
-        st.stop() # Stop execution here to prevent errors
+        st.stop()
 
-    # 2. Retrieve keys securely
     url = st.secrets["supabase"]["url"]
     key = st.secrets["supabase"]["key"]
 
     if not url or not key:
-        st.error("⚠️ Supabase URL or Key is empty in secrets configuration.")
+        st.error("⚠️ Supabase URL or Key is empty.")
         st.stop()
 
     try:
         return create_client(url, key)
     except Exception as e:
-        st.error("Failed to connect to Supabase. Please check your credentials.")
+        st.error(f"Failed to connect to Supabase: {e}")
         return None
 
 supabase = init_supabase()
@@ -50,35 +36,42 @@ if 'authenticated' not in st.session_state:
     st.session_state.authenticated = False
 if 'user' not in st.session_state:
     st.session_state.user = None
+if 'last_attempt_time' not in st.session_state:
+    st.session_state.last_attempt_time = 0
 
 # --- Authentication Logic ---
 def login_page():
     st.title("User Login")
     
-    # Login Form
     with st.form("login_form"):
         st.subheader("Sign In")
         email = st.text_input("Email")
         password = st.text_input("Password", type="password")
-        submit_button = st.form_submit_button("Log In")
         
+        submit_button = st.form_submit_button("Log In")
+
         if submit_button:
+            # 1. Simple Rate Limit Check (prevent spamming button)
+            current_time = time.time()
+            if current_time - st.session_state.last_attempt_time < 2:
+                st.warning("⏳ Too fast! Please wait a moment.")
+                return
+            st.session_state.last_attempt_time = current_time
+
+            # 2. Supabase Auth
             try:
-                # Attempt login
                 response = supabase.auth.sign_in_with_password({"email": email, "password": password})
-                
-                # Update session state on success
                 st.session_state.authenticated = True
                 st.session_state.user = response.user
+                
                 st.success("Login successful!")
                 st.rerun()
             except Exception as e:
-                # Show generic error message or specific one
-                st.error(f"Login failed: {str(e)}")
+                st.error(f"❌ **Login Failed:** {str(e)}")
+                st.warning("Please check your Email and Password.")
 
 # --- Main Application Logic ---
 def main_app():
-    # Sidebar for User Info and Logout
     with st.sidebar:
         if st.session_state.user:
             st.write(f"👤 **{st.session_state.user.email}**")
