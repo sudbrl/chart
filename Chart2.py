@@ -13,20 +13,20 @@ from supabase import create_client, Client
 def init_supabase():
     """Initialize Supabase client using Streamlit Secrets."""
     if "supabase" not in st.secrets:
-        st.error("⚠️ Secrets configuration is missing.")
+        st.error("⚠️ Configuration Error: Secrets missing.")
         st.stop()
 
     url = st.secrets["supabase"]["url"]
     key = st.secrets["supabase"]["key"]
 
     if not url or not key:
-        st.error("⚠️ Supabase URL or Key is empty.")
+        st.error("⚠️ Configuration Error: Invalid URL or Key.")
         st.stop()
 
     try:
         return create_client(url, key)
-    except Exception as e:
-        st.error(f"Failed to connect to Supabase: {e}")
+    except Exception:
+        st.error("⚠️ Connection Error: Could not connect to the database.")
         return None
 
 supabase = init_supabase()
@@ -66,8 +66,9 @@ def login_page():
                 
                 st.success("Login successful!")
                 st.rerun()
-            except Exception as e:
-                st.error(f"❌ **Login Failed:** {str(e)}")
+            except Exception:
+                # DEBUG HINT REMOVED: Replaced specific error {e} with generic message
+                st.error("❌ **Login Failed**") 
                 st.warning("Please check your Email and Password.")
 
 # --- Main Application Logic ---
@@ -201,6 +202,7 @@ def main_app():
                                        mime="application/pdf")
 
         except Exception as e:
+            # Note: We keep this specific error because it helps users debug their file issues
             st.error(f"Error processing file: {e}")
 
 # --- App Flow Control ---
