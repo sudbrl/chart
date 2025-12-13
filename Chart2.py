@@ -51,7 +51,7 @@ def login_page():
         submit_button = st.form_submit_button("Log In")
 
         if submit_button:
-            # 1. Simple Rate Limit Check (prevent spamming button)
+            # 1. Simple Rate Limit Check
             current_time = time.time()
             if current_time - st.session_state.last_attempt_time < 2:
                 st.warning("⏳ Too fast! Please wait a moment.")
@@ -67,7 +67,7 @@ def login_page():
                 st.success("Login successful!")
                 st.rerun()
             except Exception:
-                # DEBUG HINT REMOVED: Replaced specific error {e} with generic message
+                # UPDATED: Removed {str(e)} to hide the "Debug Hint"
                 st.error("❌ **Login Failed**") 
                 st.warning("Please check your Email and Password.")
 
@@ -202,7 +202,6 @@ def main_app():
                                        mime="application/pdf")
 
         except Exception as e:
-            # Note: We keep this specific error because it helps users debug their file issues
             st.error(f"Error processing file: {e}")
 
 # --- App Flow Control ---
